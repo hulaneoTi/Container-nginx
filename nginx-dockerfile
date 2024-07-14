@@ -1,26 +1,29 @@
-# Use busybox como a imagem base
-FROM busybox:latest
+# Use alpine como a imagem base
+FROM alpine:latest
 
-# Instalar wget e tcc (Tiny C Compiler)
-RUN echo "Instalando wget e tcc..." && \
-    mkdir -p /usr/local/bin && \
-    wget -O /usr/local/bin/wget http://busybox.net/downloads/binaries/1.21.1/busybox-x86_64 && \
-    chmod +x /usr/local/bin/wget && \
-    wget -O /usr/local/bin/tcc http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27.tar.bz2 && \
-    chmod +x /usr/local/bin/tcc && \
-    echo "wget e tcc instalados com sucesso."
+# Instalar dependências necessárias para compilar e instalar o Nginx
+RUN apk update && \
+    apk add --no-cache \
+    build-base \
+    gcc \
+    pcre-dev \
+    zlib-dev \
+    openssl-dev \
+    wget \
+    && echo "Dependências instaladas com sucesso."
 
-# Baixar e instalar o Nginx usando tcc
-RUN echo "Baixando e instalando o Nginx..." && \
-    wget http://nginx.org/download/nginx-1.21.6.tar.gz && \
-    tar -xzvf nginx-1.21.6.tar.gz && \
-    cd nginx-1.21.6 && \
-    ./configure --without-http_rewrite_module --without-http_gzip_module CC=/usr/local/bin/tcc && \
-    make CC=/usr/local/bin/tcc && \
+# Baixar a versão mais recente do Nginx
+RUN echo "Baixando a versão mais recente do Nginx..." && \
+    NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'nginx-\K[0-9]+\.[0-9]+\.[0-9]+' | head -n1) && \
+    wget http://nginx.org/download/nginx-$NGINX_VERSION.tar.gz && \
+    tar -xzvf nginx-$NGINX_VERSION.tar.gz && \
+    cd nginx-$NGINX_VERSION && \
+    ./configure --without-http_rewrite_module --without-http_gzip_module && \
+    make && \
     make install && \
     cd / && \
-    rm -rf nginx-1.21.6* && \
-    echo "Nginx instalado com sucesso."
+    rm -rf nginx-$NGINX_VERSION* && \
+    echo "Nginx $NGINX_VERSION instalado com sucesso."
 
 # Criar diretório para logs do Nginx
 RUN echo "Criando diretório para logs do Nginx..." && \
