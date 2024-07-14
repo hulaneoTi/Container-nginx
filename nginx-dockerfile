@@ -1,52 +1,22 @@
 # Use busybox como a imagem base
 FROM busybox:latest
 
-# Instalar dependências básicas para compilar e instalar o Nginx
-RUN echo "Instalando dependências básicas..." && \
-    mkdir /temp && \
-    wget -P /temp http://ftp.gnu.org/gnu/binutils/binutils-2.30.tar.gz && \
-    wget -P /temp http://ftp.gnu.org/gnu/gcc/gcc-8.3.0/gcc-8.3.0.tar.gz && \
-    wget -P /temp http://musl.libc.org/releases/musl-1.2.2.tar.gz && \
-    tar -xzvf /temp/binutils-2.30.tar.gz -C /temp && \
-    tar -xzvf /temp/gcc-8.3.0.tar.gz -C /temp && \
-    tar -xzvf /temp/musl-1.2.2.tar.gz -C /temp && \
-    echo "Dependências baixadas."
+# Instalar wget e tcc (Tiny C Compiler)
+RUN echo "Instalando wget e tcc..." && \
+    mkdir -p /usr/local/bin && \
+    wget -O /usr/local/bin/wget http://busybox.net/downloads/binaries/1.21.1/busybox-x86_64 && \
+    chmod +x /usr/local/bin/wget && \
+    wget -O /usr/local/bin/tcc http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27.tar.bz2 && \
+    chmod +x /usr/local/bin/tcc && \
+    echo "wget e tcc instalados com sucesso."
 
-# Compilar e instalar binutils
-RUN cd /temp/binutils-2.30 && \
-    ./configure && \
-    make && \
-    make install && \
-    echo "binutils instalado."
-
-# Compilar e instalar musl
-RUN cd /temp/musl-1.2.2 && \
-    ./configure && \
-    make && \
-    make install && \
-    echo "musl instalado."
-
-# Compilar e instalar gcc
-RUN cd /temp/gcc-8.3.0 && \
-    ./contrib/download_prerequisites && \
-    mkdir build && \
-    cd build && \
-    ../configure --disable-multilib --with-musl && \
-    make -j$(nproc) && \
-    make install && \
-    echo "gcc instalado."
-
-# Limpar arquivos temporários
-RUN rm -rf /temp && \
-    echo "Arquivos temporários removidos."
-
-# Baixar e instalar o Nginx
+# Baixar e instalar o Nginx usando tcc
 RUN echo "Baixando e instalando o Nginx..." && \
     wget http://nginx.org/download/nginx-1.21.6.tar.gz && \
     tar -xzvf nginx-1.21.6.tar.gz && \
     cd nginx-1.21.6 && \
-    ./configure --without-http_rewrite_module --without-http_gzip_module && \
-    make && \
+    ./configure --without-http_rewrite_module --without-http_gzip_module CC=/usr/local/bin/tcc && \
+    make CC=/usr/local/bin/tcc && \
     make install && \
     cd / && \
     rm -rf nginx-1.21.6* && \
