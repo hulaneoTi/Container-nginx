@@ -1,38 +1,44 @@
 # Use busybox como a imagem base
 FROM busybox:latest
 
-# Adicionar wget
-RUN wget https://busybox.net/downloads/binaries/1.21.1/busybox-x86_64 && \
-    mv busybox-x86_64 /bin/busybox && \
-    chmod +x /bin/busybox && \
-    /bin/busybox --install
+# Instalar dependências básicas para compilar e instalar o Nginx
+RUN echo "Instalando dependências básicas..." && \
+    mkdir /temp && \
+    wget -P /temp http://ftp.gnu.org/gnu/binutils/binutils-2.30.tar.gz && \
+    wget -P /temp http://ftp.gnu.org/gnu/gcc/gcc-8.3.0/gcc-8.3.0.tar.gz && \
+    wget -P /temp http://musl.libc.org/releases/musl-1.2.2.tar.gz && \
+    tar -xzvf /temp/binutils-2.30.tar.gz -C /temp && \
+    tar -xzvf /temp/gcc-8.3.0.tar.gz -C /temp && \
+    tar -xzvf /temp/musl-1.2.2.tar.gz -C /temp && \
+    echo "Dependências baixadas."
 
-# Instalar binutils
-RUN echo "Instalando binutils..." && \
-    wget http://ftp.gnu.org/gnu/binutils/binutils-2.30.tar.gz && \
-    tar -xzvf binutils-2.30.tar.gz && \
-    cd binutils-2.30 && \
+# Compilar e instalar binutils
+RUN cd /temp/binutils-2.30 && \
     ./configure && \
     make && \
     make install && \
-    cd / && \
-    rm -rf binutils-2.30* && \
-    echo "Binutils instalado com sucesso."
+    echo "binutils instalado."
 
-# Instalar gcc
-RUN echo "Instalando gcc..." && \
-    wget http://ftp.gnu.org/gnu/gcc/gcc-8.3.0/gcc-8.3.0.tar.gz && \
-    tar -xzvf gcc-8.3.0.tar.gz && \
-    cd gcc-8.3.0 && \
+# Compilar e instalar musl
+RUN cd /temp/musl-1.2.2 && \
+    ./configure && \
+    make && \
+    make install && \
+    echo "musl instalado."
+
+# Compilar e instalar gcc
+RUN cd /temp/gcc-8.3.0 && \
     ./contrib/download_prerequisites && \
     mkdir build && \
     cd build && \
-    ../configure --disable-multilib && \
+    ../configure --disable-multilib --with-musl && \
     make -j$(nproc) && \
     make install && \
-    cd / && \
-    rm -rf gcc-8.3.0* && \
-    echo "GCC instalado com sucesso."
+    echo "gcc instalado."
+
+# Limpar arquivos temporários
+RUN rm -rf /temp && \
+    echo "Arquivos temporários removidos."
 
 # Baixar e instalar o Nginx
 RUN echo "Baixando e instalando o Nginx..." && \
